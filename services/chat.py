@@ -4,7 +4,7 @@ import enum
 import logging
 import uuid
 from typing import *
-
+from expiringdict import ExpiringDict
 import api.chat
 import api.open_live as api_open_live
 import blivedm.blivedm as blivedm
@@ -48,7 +48,6 @@ client_room_manager: Optional['ClientRoomManager'] = None
 # 直播消息处理器
 _live_msg_handler: Optional['LiveMsgHandler'] = None
 
-
 def init():
     global _live_client_manager, client_room_manager, _live_msg_handler
     _live_client_manager = LiveClientManager()
@@ -62,6 +61,12 @@ async def shut_down():
     if _live_client_manager is not None:
         await _live_client_manager.shut_down()
 
+
+class Song:
+    def __init__(self, name, username, isSc) -> None:
+        self.name = name
+        self.username = username
+        self.isSc = isSc
 
 class LiveClientManager:
     """管理到B站的连接"""
@@ -383,6 +388,12 @@ class ClientRoom:
 
 
 class LiveMsgHandler(blivedm.BaseHandler):
+
+    def __init__(self):
+        self.songs = []
+        self.orderedSongs = ExpiringDict(max_len=100, max_age_seconds=24 * 60)
+        self.users = ExpiringDict(max_len=100, max_age_seconds=5 * 60)
+
     def on_client_stopped(self, client: LiveClientType, exception: Optional[Exception]):
         _live_client_manager.del_live_client(client.room_key)
 
@@ -630,6 +641,28 @@ class LiveMsgHandler(blivedm.BaseHandler):
         if need_translate:
             asyncio.create_task(self._translate_and_response(message.msg, room.room_key, message.msg_id))
 
+        if message.msg.startswith("点歌") and (message.fans_medal_wearing_status or message.uname == '六花回家家'):
+            if (len(self.songs) == 10):
+                return
+
+            songName = message.msg.replace("点歌", "").strip()
+            if (songName in self.orderedSongs):
+                return
+            
+            if (message.uname in self.users):
+                return
+
+            self.orderedSongs[songName] = 1
+            self.users[message.uname] = 1
+            song = {
+                "name" : songName, 
+                "username": message.uname, 
+                "isSc": False
+            }
+            self.songs.append(song)
+            print(song)
+            room.send_cmd_data(api.chat.Command.ADD_SONG, song)
+
     def _on_open_live_gift(self, client: OpenLiveClient, message: dm_open_models.GiftMessage):
         avatar_url = services.avatar.process_avatar_url(message.uface)
         services.avatar.update_avatar_cache_if_expired(message.uid, avatar_url)
@@ -705,6 +738,25 @@ class LiveMsgHandler(blivedm.BaseHandler):
             asyncio.create_task(self._translate_and_response(
                 message.message, room.room_key, msg_id, services.translate.Priority.HIGH
             ))
+        
+        if message.message.startswith("点歌"):
+            songName = message.message.replace("点歌", "").strip()
+            if (songName in self.orderedSongs):
+                return
+            
+            if (message.uname in self.users):
+                return
+
+            self.orderedSongs[songName] = 1
+            self.users[message.uname] = 1
+            song = {
+                "name" : songName, 
+                "username": message.uname, 
+                "isSc": True
+            }
+            self.songs.append(song)
+            print(song)
+            room.send_cmd_data(api.chat.Command.ADD_SONG, song)
 
     def _on_open_live_super_chat_delete(self, client: OpenLiveClient, message: dm_open_models.SuperChatDeleteMessage):
         room = client_room_manager.get_room(client.room_key)

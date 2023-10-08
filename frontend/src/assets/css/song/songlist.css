@@ -1,0 +1,62 @@
+ol {
+  counter-reset: list;
+  list-style: none;
+}
+
+ol li {
+  cursor: grab;
+  overflow: hidden;
+  counter-increment: list;
+  margin-bottom: 10px;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #ffffff;
+  font-family: "DFPHannotateW7-GB" "台灣圓體";
+  font-size: 33px;
+  text-shadow: 2px 1px 0 hsl(0, 0%, 0%), 1px -1px 0 #000000, -1px 1px 0 #000000,
+    1px 1px 0 #000;
+  word-spacing: 5px;
+  letter-spacing: 5px;
+}
+
+ol li.sc {
+  animation: glow 1.5s infinite alternate;
+}
+
+ol li:hover {
+  text-shadow: 2px 2px 0 hsl(315, 74%, 59%), 1px -1px 0 #d65bb1,
+    -1px 1px 0 #f059ac, 1px 1px 0 #000;
+}
+
+ol li::before {
+  content: counter(list);
+  font-family: "台灣圓體";
+  color: #fff;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
+    1px 1px 0 #000;
+  text-align: center;
+  width: 2.2em;
+  height: 3em;
+  margin-right: 0.5em;
+  line-height: 3rem;
+  font-size: 33px;
+}
+
+.marquee {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+@keyframes glow {
+  from {
+    font-size: 30px;
+    text-shadow: 2px 1px 0 hsl(0, 0%, 0%), 1px -1px 0 #000000,
+      -1px 1px 0 #000000, 1px 1px 0 #000;
+  }
+  to {
+    font-size: 33px;
+    text-shadow: 2px 1px 0 hsl(0, 0%, 0%), 1px -1px 0 #ff00d4,
+      -1px 1px 0 #ff09ff, 1px 1px 0 #ff30dc;
+  }
+}

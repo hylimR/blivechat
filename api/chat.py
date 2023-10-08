@@ -32,7 +32,9 @@ class Command(enum.IntEnum):
     DEL_SUPER_CHAT = 6
     UPDATE_TRANSLATION = 7
     FATAL_ERROR = 8
-
+    ADD_SONG = 9
+    REMOVE_SONG = 10
+    INIT_SONG = 11
 
 class ContentType(enum.IntEnum):
     TEXT = 0
@@ -186,6 +188,12 @@ class ChatHandler(tornado.websocket.WebSocketHandler):
             elif cmd == Command.JOIN_ROOM:
                 self._on_join_room_req(body)
 
+            elif cmd == Command.REMOVE_SONG:
+                self._on_remove_song(body)
+
+            elif cmd == Command.INIT_SONG:
+                self._on_init_song()
+
             else:
                 logger.warning('client=%s unknown cmd=%d, body=%s', self.request.remote_ip, cmd, body)
 
@@ -232,6 +240,19 @@ class ChatHandler(tornado.websocket.WebSocketHandler):
         if self.application.settings['debug']:
             return True
         return super().check_origin(origin)
+    
+    def _on_init_song(self):
+        self.send_cmd_data(api.chat.Command.INIT_SONG, services.chat._live_msg_handler.songs)
+
+    def _on_remove_song(self, body):
+        print(body)
+        print(services.chat._live_msg_handler.songs)
+        songToRemove = next(filter(lambda e: e['name'] == body["data"]["name"], services.chat._live_msg_handler.songs), None)
+        if (songToRemove is not None):
+            services.chat._live_msg_handler.songs.remove(songToRemove)
+        
+        room = services.chat.client_room_manager.get_room(self.room_key)
+        room.send_cmd_data(api.chat.Command.REMOVE_SONG, songToRemove)
 
     @property
     def has_joined_room(self):
